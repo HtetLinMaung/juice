@@ -1,0 +1,19 @@
+POST http://localhost:5200/juice/api/entities HTTP/1.1
+content-type: application/json
+
+{
+    "appid": "61d9a3a3fcb9a38198cbca6d",
+    "name": "todos",
+    "columns": [
+        {
+            "name": "label",
+            "datatype": "text",
+            "isrequired": true
+        },
+        {
+            "name": "done",
+            "datatype": "boolean",
+            "defaultvalue": false
+        }
+    ]
+}
