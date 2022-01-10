@@ -1,7 +1,7 @@
-POST http://localhost:5200/juice/todo/todos/688a40d3db3621b3 HTTP/1.1
+POST http://localhost:5200/juice/todoapp/todos/961b7c9fbef8f6a5 HTTP/1.1
 content-type: application/json
 
 {
-    "label": "test label 2",
+    "label": "test label 3",
     "done": true
 }

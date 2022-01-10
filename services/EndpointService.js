@@ -34,3 +34,22 @@ exports.createCrudEndpoints = async (entity) => {
     }
   }
 };
+
+exports.updateCrudEndpoints = async (oldentity, entityname) => {
+  const app = await Application.findById(oldentity.appid);
+  if (app) {
+    const oldendpoints = await EndPoint.find({ entityid: oldentity._id });
+    for (const oldendpoint of oldendpoints) {
+      const name = oldendpoint.name;
+      if (name.includes("{id}")) {
+        oldendpoint.name = entityname + "/{id}";
+      } else {
+        oldendpoint.name = entityname;
+      }
+      oldendpoint.url = `/juice/${
+        app.appendpoint
+      }/${oldendpoint.name.toLowerCase()}/${oldendpoint.key}`;
+      await oldendpoint.save();
+    }
+  }
+};

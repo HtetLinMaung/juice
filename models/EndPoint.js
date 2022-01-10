@@ -19,6 +19,10 @@ const endPointSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Entity",
     },
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

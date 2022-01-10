@@ -10,6 +10,7 @@ const Application = require("../models/Application");
 const EndPoint = require("../models/EndPoint");
 const Entity = require("../models/Entity");
 const { getModel } = require("../services/EntityService");
+const { queryToMongoFilter } = require("../utils/mongoose-utils");
 const router = express.Router();
 
 const checkAuthAndGetModel = async (req, res, endpointname, method) => {
@@ -50,20 +51,32 @@ router
       if (!Model) {
         throw new Error("Model is null!");
       }
+
+      const filter = {
+        status: { $ne: 0 },
+      };
+
+      const search = req.query.search;
       const page = req.query.page;
       const perpage = req.query.perpage;
 
+      if (search) {
+        filter.$text = { $search: search };
+      }
+
+      queryToMongoFilter(req.query, filter);
+
       let data = [];
 
-      const total = await Model.find().countDocuments();
+      const total = await Model.find(filter).countDocuments();
       let pagination = {};
       if (page && perpage) {
         pagination = { page, perpage };
         const offset = (page - 1) * perpage;
-        data = await Model.find().skip(offset).limit(perpage);
+        data = await Model.find(filter).skip(offset).limit(perpage);
         pagination.pagecounts = Math.ceil(total / perpage);
       } else {
-        data = await Model.find();
+        data = await Model.find(filter);
       }
 
       return res.json({ ...OK, data, total, ...pagination });
@@ -107,7 +120,7 @@ router
         throw new Error("Model is null!");
       }
       const data = await Model.findById(req.params.id);
-      if (!data) {
+      if (!data || data.status == 0) {
         return res.status(NOT_FOUND.code).json(NOT_FOUND);
       }
 
@@ -129,7 +142,7 @@ router
         throw new Error("Model is null!");
       }
       const data = await Model.findById(req.params.id);
-      if (!data) {
+      if (!data || data.status == 0) {
         return res.status(NOT_FOUND.code).json(NOT_FOUND);
       }
       for (const [k, v] of Object.entries({ ...req.body })) {
@@ -156,10 +169,16 @@ router
       }
 
       const data = await Model.findById(req.params.id);
-      if (!data) {
+      if (!data || data.status == 0) {
         return res.status(NOT_FOUND.code).json(NOT_FOUND);
       }
-      await Model.findByIdAndDelete(req.params.id);
+      if (process.env.SOFT_DELETE == "YES") {
+        data.status = 0;
+        await data.save();
+      } else {
+        await Model.findByIdAndDelete(req.params.id);
+      }
+
       return res.sendStatus(204);
     } catch (err) {
       console.log(err);

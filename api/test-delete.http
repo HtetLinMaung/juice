@@ -1,0 +1,2 @@
+DELETE http://localhost:5200/juice/todo/todos/61d9a44566bd61e2522b449c/688a40d3db3621b3 HTTP/1.1
+content-type: application/json

@@ -14,8 +14,8 @@ exports.getModel = async (entity) => {
   });
 };
 
-exports.saveEntity = async (appid, entityname, columns) => {
-  const entity = new Entity({ name: entityname, appid });
+exports.saveEntity = async (appid, entityname, timestamps, columns) => {
+  const entity = new Entity({ name: entityname, appid, timestamps });
   await entity.save();
 
   for (const col of columns) {

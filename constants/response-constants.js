@@ -22,3 +22,8 @@ exports.UNAUTHORIZED = {
   code: 401,
   message: "Unauthorized",
 };
+
+exports.BAD_REQUEST = {
+  code: 400,
+  message: "Bad Request",
+};

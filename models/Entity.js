@@ -21,5 +21,6 @@ const entitySchema = new Schema(
     timestamps: true,
   }
 );
+entitySchema.index({ "$**": "text" });
 
 module.exports = model("Entity", entitySchema);

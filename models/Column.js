@@ -13,9 +13,13 @@ const columnSchema = new Schema(
     name: REQUIRED_STRING,
     datatype: {
       ...REQUIRED_STRING,
-      enum: ["text", "number", "boolean"],
+      enum: ["text", "number", "boolean", "date", "objectid", "default"],
     },
     isrequired: {
+      type: Boolean,
+      default: true,
+    },
+    isunique: {
       type: Boolean,
       default: false,
     },
