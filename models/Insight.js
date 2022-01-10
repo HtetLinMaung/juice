@@ -1,8 +1,4 @@
 const { Schema, model } = require("mongoose");
-// const {
-//   REQUIRED_STRING,
-//   DEFAULT_STRING,
-// } = require("../constants/mongoose-constants");
 
 const insightSchema = new Schema(
   {
