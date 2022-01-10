@@ -87,7 +87,7 @@ router.get("/:id", isAuth, async (req, res) => {
 router.put("/:id", isAuth, async (req, res) => {
   try {
     const entity = await Entity.findById(req.params.id);
-    if (!entity || entity.status == 0) {
+    if (!entity) {
       return res.status(NOT_FOUND.code).json(NOT_FOUND);
     }
     await updateCrudEndpoints(entity, req.body.name);
@@ -114,10 +114,11 @@ router.put("/:id", isAuth, async (req, res) => {
 router.delete("/:id", isAuth, async (req, res) => {
   try {
     const entity = await Entity.findById(req.params.id);
-    if (!entity || entity.status == 0) {
+    if (!entity) {
       return res.status(NOT_FOUND.code).json(NOT_FOUND);
     }
     await Entity.findByIdAndDelete(req.params.id);
+    await Column.deleteMany({ entityid: req.params.id });
     res.sendStatus(204);
   } catch (err) {
     console.log(err);

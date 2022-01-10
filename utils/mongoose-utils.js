@@ -57,7 +57,7 @@ exports.getModel = (modelname, schemabody = {}, schemaoptions = {}) => {
 
 exports.queryToMongoFilter = (query, filter = {}) => {
   for (const [k, v] of Object.entries(query)) {
-    if (!["search", "page", "perpage", "status"].includes(k)) {
+    if (!["search", "page", "perpage", "status", "sort"].includes(k)) {
       let value = v;
       let key = k;
       if (value == "true") {

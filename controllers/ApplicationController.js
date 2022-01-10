@@ -8,6 +8,9 @@ const {
 } = require("../constants/response-constants");
 const isAuth = require("../middlewares/is-auth");
 const Application = require("../models/Application");
+const EndPoint = require("../models/EndPoint");
+const Entity = require("../models/Entity");
+const Column = require("../models/Column");
 const { saveApplication } = require("../services/ApplicationService");
 
 const router = express.Router();
@@ -54,6 +57,53 @@ router.get("/:id", isAuth, async (req, res) => {
       return res.status(UNAUTHORIZED.code).json(UNAUTHORIZED);
     }
     res.json({ ...OK, data });
+  } catch (err) {
+    console.log(err);
+    return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
+  }
+});
+
+router.put(":/id", isAuth, async (req, res) => {
+  try {
+    const data = await Application.findById(req.params.id);
+    if (!data) {
+      return res.status(NOT_FOUND.code).json(NOT_FOUND);
+    }
+    if (data.userid != req.tokenData.userid) {
+      return res.status(UNAUTHORIZED.code).json(UNAUTHORIZED);
+    }
+    data.appname = req.body.appname;
+    data.appendpoint = req.body.appname.toLowerCase();
+    await data.save();
+    const endpoints = await EndPoint.find({ appid: data._id });
+    for (const endpoint of endpoints) {
+      endpoint.url = `/juice/${data.appendpoint}/${endpoint.name}/${endpoint.key}`;
+      await endpoint.save();
+    }
+    res.json({ ...OK, data });
+  } catch (err) {
+    console.log(err);
+    return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
+  }
+});
+
+router.delete("/:id", isAuth, async (req, res) => {
+  try {
+    const data = await Application.findById(req.params.id);
+    if (!data) {
+      return res.status(NOT_FOUND.code).json(NOT_FOUND);
+    }
+    if (data.userid != req.tokenData.userid) {
+      return res.status(UNAUTHORIZED.code).json(UNAUTHORIZED);
+    }
+    await Application.findByIdAndDelete(req.params.id);
+    const entities = await Entity.find({ appid: req.params.id });
+    for (const entity of entities) {
+      await Column.deleteMany({ entityid: entity._id });
+    }
+    await Entity.deleteMany({ appid: req.params.id });
+    await EndPoint.deleteMany({ appid: req.params.id });
+    res.sendStatus(204);
   } catch (err) {
     console.log(err);
     return res.status(SERVER_ERROR.code).json(SERVER_ERROR);

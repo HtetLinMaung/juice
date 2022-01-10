@@ -10,10 +10,13 @@ const Application = require("../models/Application");
 const EndPoint = require("../models/EndPoint");
 const Entity = require("../models/Entity");
 const { getModel } = require("../services/EntityService");
+const { addInsight, addLog } = require("../services/InsightService");
 const { queryToMongoFilter } = require("../utils/mongoose-utils");
+const moment = require("moment");
 const router = express.Router();
 
 const checkAuthAndGetModel = async (req, res, endpointname, method) => {
+  req.starttime = moment();
   const app = await Application.findOne({
     appendpoint: req.params.appendpoint,
   });
@@ -26,7 +29,7 @@ const checkAuthAndGetModel = async (req, res, endpointname, method) => {
     name: endpointname,
     method: method,
   });
-  if (!endpoint) {
+  if (!endpoint || endpoint.disabled) {
     res.status(NOT_FOUND.code).json(NOT_FOUND);
     return null;
   }
@@ -34,6 +37,8 @@ const checkAuthAndGetModel = async (req, res, endpointname, method) => {
     res.status(UNAUTHORIZED.code).json(UNAUTHORIZED);
     return null;
   }
+  req.insight = await addInsight(app._id, endpoint._id);
+  addLog("info", `Executing ${endpointname}`, req.insight._id);
   const entity = await Entity.findById(endpoint.entityid);
   return getModel(entity);
 };
@@ -59,6 +64,16 @@ router
       const search = req.query.search;
       const page = req.query.page;
       const perpage = req.query.perpage;
+      const sort = req.query.sort;
+      let sortOptions = {};
+      if (sort) {
+        for (const kv of sort.split(",")) {
+          const kvarr = kv.split("___");
+          if (kvarr.length > 1) {
+            sortOptions[kvarr[0]] = kvarr[1] == "asc" ? 1 : -1;
+          }
+        }
+      }
 
       if (search) {
         filter.$text = { $search: search };
@@ -73,15 +88,36 @@ router
       if (page && perpage) {
         pagination = { page, perpage };
         const offset = (page - 1) * perpage;
-        data = await Model.find(filter).skip(offset).limit(perpage);
+        if (sort) {
+          data = await Model.find(filter)
+            .sort(sortOptions)
+            .skip(offset)
+            .limit(perpage);
+        } else {
+          data = await Model.find(filter).skip(offset).limit(perpage);
+        }
+
         pagination.pagecounts = Math.ceil(total / perpage);
       } else {
-        data = await Model.find(filter);
+        if (sort) {
+          data = await Model.find(filter).sort(sortOptions);
+        } else {
+          data = await Model.find(filter);
+        }
       }
 
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = true;
+      req.insight.code = OK.code;
+      req.insight.save();
       return res.json({ ...OK, data, total, ...pagination });
     } catch (err) {
       console.log(err);
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
       return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
     }
   })
@@ -99,9 +135,18 @@ router
       const data = new Model(req.body);
       await data.save();
 
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = true;
+      req.insight.code = CREATED.code;
+      req.insight.save();
       return res.status(CREATED.code).json({ ...CREATED, data });
     } catch (err) {
       console.log(err);
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
       return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
     }
   });
@@ -121,12 +166,25 @@ router
       }
       const data = await Model.findById(req.params.id);
       if (!data || data.status == 0) {
+        req.insight.duration = moment.diff(req.starttime, moment());
+        req.insight.success = false;
+        req.insight.code = NOT_FOUND.code;
+        req.insight.save();
         return res.status(NOT_FOUND.code).json(NOT_FOUND);
       }
 
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = true;
+      req.insight.code = OK.code;
+      req.insight.save();
       return res.json({ ...OK, data });
     } catch (err) {
       console.log(err);
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
       return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
     }
   })
@@ -143,6 +201,10 @@ router
       }
       const data = await Model.findById(req.params.id);
       if (!data || data.status == 0) {
+        req.insight.duration = moment.diff(req.starttime, moment());
+        req.insight.success = false;
+        req.insight.code = NOT_FOUND.code;
+        req.insight.save();
         return res.status(NOT_FOUND.code).json(NOT_FOUND);
       }
       for (const [k, v] of Object.entries({ ...req.body })) {
@@ -150,9 +212,18 @@ router
       }
       await data.save();
 
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = true;
+      req.insight.code = OK.code;
+      req.insight.save();
       return res.json({ ...OK, data });
     } catch (err) {
       console.log(err);
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
       return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
     }
   })
@@ -170,6 +241,10 @@ router
 
       const data = await Model.findById(req.params.id);
       if (!data || data.status == 0) {
+        req.insight.duration = moment.diff(req.starttime, moment());
+        req.insight.success = false;
+        req.insight.code = NOT_FOUND.code;
+        req.insight.save();
         return res.status(NOT_FOUND.code).json(NOT_FOUND);
       }
       if (process.env.SOFT_DELETE == "YES") {
@@ -179,9 +254,18 @@ router
         await Model.findByIdAndDelete(req.params.id);
       }
 
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = true;
+      req.insight.code = 204;
+      req.insight.save();
       return res.sendStatus(204);
     } catch (err) {
       console.log(err);
+      req.insight.duration = moment.diff(req.starttime, moment());
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
       return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
     }
   });
