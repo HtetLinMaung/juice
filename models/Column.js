@@ -23,6 +23,15 @@ const columnSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    issequence: {
+      type: Boolean,
+      default: false,
+    },
+    sequenceid: {
+      type: Schema.Types.ObjectId,
+      ref: "Sequence",
+      default: null,
+    },
     defaultvalue: {
       type: Schema.Types.Mixed,
       default: null,

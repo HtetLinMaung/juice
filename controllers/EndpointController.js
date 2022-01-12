@@ -8,6 +8,8 @@ const {
 const isAuth = require("../middlewares/is-auth");
 const { queryToMongoFilter } = require("../utils/mongoose-utils");
 const EndPoint = require("../models/EndPoint");
+const Application = require("../models/Application");
+const Column = require("../models/Column");
 
 router.get("/", isAuth, async (req, res) => {
   try {
@@ -51,7 +53,31 @@ router.get("/:id", isAuth, async (req, res) => {
     if (!endpoint) {
       return res.status(NOT_FOUND.code).json(NOT_FOUND);
     }
-    return res.json({ ...OK, data: endpoint });
+    const columns = await Column.find({ entityid: endpoint.entityid });
+    let request = {};
+    if (["post", "put"].includes(endpoint.method)) {
+      for (const column of columns) {
+        switch (column.datatype) {
+          case "number":
+            request[column.name] = column.defaultvalue || 0;
+            break;
+          case "date":
+            request[column.name] =
+              column.defaultvalue || new Date().toISOString();
+            break;
+          case "boolean":
+            request[column.name] = column.defaultvalue || false;
+            break;
+          default:
+            request[column.name] = column.defaultvalue || "";
+        }
+      }
+    }
+    return res.json({
+      ...OK,
+      data: endpoint,
+      request: JSON.stringify(request, undefined, 2),
+    });
   } catch (err) {
     console.log(err);
     return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
@@ -64,8 +90,16 @@ router.put("/:id", isAuth, async (req, res) => {
     if (!endpoint) {
       return res.status(NOT_FOUND.code).json(NOT_FOUND);
     }
-    endpoint.key = req.body.key;
-    endpoint.disabled = req.body.disabled;
+    // endpoint.key = req.body.key;
+    // endpoint.disabled = req.body.disabled;
+    // endpoint.guardtoken = req.body.guardtoken;
+    for (const [k, v] of Object.entries({ ...req.body })) {
+      if (["key", "disabled", "guardtoken"].includes(k)) {
+        endpoint[k] = v;
+      }
+    }
+    const data = await Application.findById(endpoint.appid);
+    endpoint.url = `/juice/${data.appendpoint}/${endpoint.name}/${endpoint.key}`;
     await endpoint.save();
     return res.json({ ...OK, data: endpoint });
   } catch (err) {

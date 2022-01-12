@@ -23,10 +23,15 @@ const endPointSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    guardtoken: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+endPointSchema.index({ "$**": "text" });
 
 module.exports = model("EndPoint", endPointSchema);

@@ -12,6 +12,7 @@ const EndPoint = require("../models/EndPoint");
 const Entity = require("../models/Entity");
 const Column = require("../models/Column");
 const { saveApplication } = require("../services/ApplicationService");
+const axios = require("axios");
 
 const router = express.Router();
 
@@ -30,6 +31,19 @@ router.post("/", isAuth, async (req, res) => {
       userid: req.tokenData.userid,
       username: req.tokenData.username,
     });
+    axios
+      .post(process.env.IAM + "/auth/create-superadmin", {
+        appid: app._id,
+        userid: "admin",
+        password: "P@ssword",
+        username: "Admin",
+        companyid: "techhype",
+        companyname: "techhype",
+        otpservice: "none",
+        profile: "",
+        mobile: "09404888722",
+      })
+      .catch(console.log);
     res.json({ ...OK, data: app });
   } catch (err) {
     console.log(err);

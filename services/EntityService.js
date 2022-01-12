@@ -1,10 +1,16 @@
+const { DEFAULT_STRING } = require("../constants/mongoose-constants");
 const Column = require("../models/Column");
 const Entity = require("../models/Entity");
 const { getModel, columnToSchemaData } = require("../utils/mongoose-utils");
 
 exports.getModel = async (entity) => {
   const columns = await Column.find({ entityid: entity._id });
-  let schemabody = {};
+  let schemabody = {
+    _userid: DEFAULT_STRING,
+    _username: DEFAULT_STRING,
+    _companyid: DEFAULT_STRING,
+    _companyname: DEFAULT_STRING,
+  };
   for (const col of columns) {
     schemabody = { ...schemabody, ...columnToSchemaData(col) };
   }
