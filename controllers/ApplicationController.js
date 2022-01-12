@@ -13,6 +13,9 @@ const Entity = require("../models/Entity");
 const Column = require("../models/Column");
 const { saveApplication } = require("../services/ApplicationService");
 const axios = require("axios");
+const Sequence = require("../models/Sequence");
+const SequenceRule = require("../models/SequenceRule");
+const SequenceRuleType = require("../models/SequenceRuleType");
 
 const router = express.Router();
 
@@ -44,6 +47,19 @@ router.post("/", isAuth, async (req, res) => {
         mobile: "09404888722",
       })
       .catch(console.log);
+
+    const sequence = new Sequence({
+      rulename: "AUTO_INCREMENT",
+      appid: app._id,
+    });
+    await sequence.save();
+    let sequenceRule = new SequenceRule({ sequenceid: sequence._id });
+    await sequenceRule.save();
+    let sequenceRuleType = new SequenceRuleType({
+      seqruleid: sequenceRule._id,
+    });
+    await sequenceRuleType.save();
+
     res.json({ ...OK, data: app });
   } catch (err) {
     console.log(err);
