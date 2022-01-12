@@ -70,7 +70,7 @@ const checkAuthAndGetModel = async (req, res, endpointname, method) => {
   }
 
   if (method == "post") {
-    const columns = await Column.find({ entityid: entity._id });
+    const columns = await Column.find({ entityid: endpoint.entityid });
     req.sequencecolumns = columns.filter((col) => col.issequence);
   }
 
@@ -194,7 +194,7 @@ router
       for (const column of req.sequencecolumns) {
         data[column.name] = await generateSequence(
           column.sequenceid,
-          data[column.name]
+          data[column.name] || ""
         );
       }
       await data.save();

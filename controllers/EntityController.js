@@ -117,6 +117,8 @@ router.delete("/:id", isAuth, async (req, res) => {
     if (!entity) {
       return res.status(NOT_FOUND.code).json(NOT_FOUND);
     }
+    // const Model = await getModel(entity);
+    // Model.remove({});
     await Entity.findByIdAndDelete(req.params.id);
     await Column.deleteMany({ entityid: req.params.id });
     res.sendStatus(204);

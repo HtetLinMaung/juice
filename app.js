@@ -19,6 +19,7 @@ app.use(
 );
 app.use("/juice/api/entities", require("./controllers/EntityController"));
 app.use("/juice/api/endpoints", require("./controllers/EndpointController"));
+app.use("/juice/api/sequences", require("./controllers/SequenceController"));
 app.use("/juice", require("./controllers/ApiController"));
 
 mongoose.connect(process.env.DB_CONNECTION).then(() => {

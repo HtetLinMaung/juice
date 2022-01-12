@@ -21,13 +21,17 @@ exports.generateSequence = async (sequenceid, types) => {
       }
     );
     if (ruletypes.map((t) => t.type).join(",") == types) {
-      const seqno = rule.seqno;
-      await SequenceRule.findByIdAndUpdate(rule._id, {
-        $set: {
-          seqno: { $inc: rule.step },
-        },
+      const ruletype = await SequenceRule.findByIdAndUpdate(rule._id, {
+        $inc: { seqno: rule.step },
       });
-      finalseq = sequence.format.replaceAll("{seqno}", formatSeqno(seqno));
+      finalseq = sequence.format.replaceAll(
+        "{seqno}",
+        formatSeqno(
+          ruletype.seqno,
+          sequence.prefixchar,
+          sequence.mindigitlength
+        )
+      );
       for (const ruletype of ruletypes) {
         finalseq = finalseq.replaceAll(`{type_${ruletype.sr}}`, ruletype.type);
       }
