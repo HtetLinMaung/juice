@@ -19,6 +19,7 @@ const jwt = require("jsonwebtoken");
 const Column = require("../models/Column");
 const { generateSequence } = require("../services/SequenceService");
 const router = express.Router();
+const socketio = require("../utils/socket");
 
 const checkAuthAndGetModel = async (req, res, endpointname, method) => {
   req.starttime = moment();
@@ -78,9 +79,10 @@ const checkAuthAndGetModel = async (req, res, endpointname, method) => {
   addLog("info", `Executing ${endpointname}`, req.insight._id);
 
   if (!endpoint.entityid) {
-    return 'get-app-token';
+    return "get-app-token";
   }
   const entity = await Entity.findById(endpoint.entityid);
+  req.entityname = entity.name;
   return getModel(entity);
 };
 
@@ -206,6 +208,10 @@ router
       req.insight.success = true;
       req.insight.code = CREATED.code;
       req.insight.save();
+      socketio.getInstance().to(req.appid).emit("data-change", {
+        entityname: req.entityname,
+        action: "create",
+      });
       return res.status(CREATED.code).json({ ...CREATED, data });
     } catch (err) {
       console.log(err);
@@ -311,6 +317,10 @@ router
       req.insight.success = true;
       req.insight.code = OK.code;
       req.insight.save();
+      socketio.getInstance().to(req.appid).emit("data-change", {
+        entityname: req.entityname,
+        action: "update",
+      });
       return res.json({ ...OK, data });
     } catch (err) {
       console.log(err);
@@ -366,6 +376,10 @@ router
       req.insight.success = true;
       req.insight.code = 204;
       req.insight.save();
+      socketio.getInstance().to(req.appid).emit("data-change", {
+        entityname: req.entityname,
+        action: "delete",
+      });
       return res.sendStatus(204);
     } catch (err) {
       console.log(err);

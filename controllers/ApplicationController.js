@@ -93,7 +93,7 @@ router.get("/:id", isAuth, async (req, res) => {
   }
 });
 
-router.put(":/id", isAuth, async (req, res) => {
+router.put("/:id", isAuth, async (req, res) => {
   try {
     const data = await Application.findById(req.params.id);
     if (!data) {
@@ -104,6 +104,8 @@ router.put(":/id", isAuth, async (req, res) => {
     }
     data.appname = req.body.appname;
     data.appendpoint = req.body.appname.toLowerCase();
+    data.secret = req.body.secret;
+    data.tokenexpiresin = req.body.tokenexpiresin;
     await data.save();
     const endpoints = await EndPoint.find({ appid: data._id });
     for (const endpoint of endpoints) {
