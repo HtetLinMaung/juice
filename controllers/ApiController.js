@@ -55,7 +55,7 @@ const checkAuthAndGetModel = async (req, res, endpointname, method) => {
     const token = authHeader.split(" ")[1];
     let decodedToken;
     try {
-      decodedToken = jwt.verify(token, process.env.SECRET);
+      decodedToken = jwt.verify(token, app.secret);
     } catch (err) {
       res
         .status(BAD_REQUEST.code)
@@ -77,6 +77,9 @@ const checkAuthAndGetModel = async (req, res, endpointname, method) => {
   req.insight = await addInsight(app._id, endpoint._id);
   addLog("info", `Executing ${endpointname}`, req.insight._id);
 
+  if (!endpoint.entityid) {
+    return 'get-app-token';
+  }
   const entity = await Entity.findById(endpoint.entityid);
   return getModel(entity);
 };
