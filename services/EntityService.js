@@ -25,7 +25,12 @@ exports.saveEntity = async (appid, entityname, timestamps, columns) => {
   await entity.save();
 
   for (const col of columns) {
-    const column = new Column({ ...col, entityid: entity._id });
+    const column = new Column({
+      ...col,
+      entityid: entity._id,
+      sequenceid: col.sequenceid == "" ? null : col.sequenceid,
+    });
+
     await column.save();
   }
   return entity;

@@ -124,7 +124,7 @@ router
       let sortOptions = {};
       if (sort) {
         for (const kv of sort.split(",")) {
-          const kvarr = kv.split("___");
+          const kvarr = kv.split("__");
           if (kvarr.length > 1) {
             sortOptions[kvarr[0]] = kvarr[1] == "asc" ? 1 : -1;
           }
@@ -138,27 +138,73 @@ router
       queryToMongoFilter(req.query, filter);
 
       let data = [];
-
-      const total = await Model.find(filter).countDocuments();
+      let total = 0;
       let pagination = {};
-      if (page && perpage) {
-        pagination = { page, perpage };
-        const offset = (page - 1) * perpage;
-        if (sort) {
-          data = await Model.find(filter)
-            .sort(sortOptions)
-            .skip(offset)
-            .limit(perpage);
-        } else {
-          data = await Model.find(filter).skip(offset).limit(perpage);
+
+      if (req.query.group__columns) {
+        const group = { _id: {} };
+        for (const gpcol of req.query.group__columns.split(",")) {
+          group._id[gpcol] = `$${gpcol}`;
+        }
+        if (req.query.group__sums) {
+          for (const gpsums of req.query.group__sums.split(",")) {
+            group[gpsums] = { $sum: `$${gpsums}` };
+          }
+        }
+        let project = {};
+        if (req.query.projection) {
+          for (const column of req.query.projection.split(" ")) {
+            project[column] = { [column]: `$${column}` };
+          }
         }
 
-        pagination.pagecounts = Math.ceil(total / perpage);
+        const aggregate = [];
+
+        // if (req.query.projection) {
+        //   aggregate.push({
+        //     $project: project,
+        //   });
+        // }
+        aggregate.push({
+          $match: filter,
+        });
+        aggregate.push({
+          $group: group,
+        });
+        if (req.query.sort) {
+          aggregate.push({
+            $sort: sortOptions,
+          });
+        }
+
+        data = await Model.aggregate(aggregate);
+        total = data.length;
       } else {
-        if (sort) {
-          data = await Model.find(filter).sort(sortOptions);
+        total = await Model.find(filter).countDocuments();
+
+        if (page && perpage) {
+          pagination = { page, perpage };
+          const offset = (page - 1) * perpage;
+          if (sort) {
+            data = await Model.find(filter, req.query.projection || "")
+              .sort(sortOptions)
+              .skip(offset)
+              .limit(perpage);
+          } else {
+            data = await Model.find(filter, req.query.projection || "")
+              .skip(offset)
+              .limit(perpage);
+          }
+
+          pagination.pagecounts = Math.ceil(total / perpage);
         } else {
-          data = await Model.find(filter);
+          if (sort) {
+            data = await Model.find(filter, req.query.projection || "").sort(
+              sortOptions
+            );
+          } else {
+            data = await Model.find(filter, req.query.projection || "");
+          }
         }
       }
 
@@ -237,7 +283,10 @@ router
       if (!Model) {
         return;
       }
-      const data = await Model.findById(req.params.id);
+      const data = await Model.findById(
+        req.params.id,
+        req.query.projection || ""
+      );
       if (!data || data.status == 0) {
         req.insight.duration = moment().diff(req.starttime);
         req.insight.success = false;

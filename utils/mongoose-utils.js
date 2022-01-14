@@ -28,10 +28,10 @@ exports.columnToSchemaData = (column) => {
     },
   };
   if (column.enum) {
-    col.enum = column.enum.split(",");
+    col[column.name].enum = column.enum.split(",");
   }
   if (column.defaultvalue) {
-    col.default = column.defaultvalue;
+    col[column.name].default = column.defaultvalue;
   }
   return col;
 };
@@ -57,7 +57,12 @@ exports.getModel = (modelname, schemabody = {}, schemaoptions = {}) => {
 
 exports.queryToMongoFilter = (query, filter = {}) => {
   for (const [k, v] of Object.entries(query)) {
-    if (!["search", "page", "perpage", "status", "sort"].includes(k)) {
+    if (
+      !["search", "page", "perpage", "status", "sort", "projection"].includes(
+        k
+      ) &&
+      !k.startsWith("group__")
+    ) {
       let value = v;
       let key = k;
       if (value == "true") {
@@ -68,7 +73,10 @@ exports.queryToMongoFilter = (query, filter = {}) => {
       const keyoperator = k.split("__");
       if (keyoperator.length > 1) {
         key = keyoperator[0];
-        value = { [`$${keyoperator[1]}`]: value };
+        value = {
+          [`$${keyoperator[1]}`]:
+            keyoperator[1] == "in" ? value.split(",") : value,
+        };
       }
 
       filter[key] = value;
