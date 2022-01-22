@@ -13,6 +13,8 @@ const {
 } = require("../services/EndpointService");
 const { saveEntity } = require("../services/EntityService");
 const { queryToMongoFilter } = require("../utils/mongoose-utils");
+const Sequence = require("../models/oldsequence/Sequence");
+const SequenceRuleDetail = require("../models/SequenceRuleDetail");
 
 const router = express.Router();
 
@@ -94,14 +96,42 @@ router.put("/:id", isAuth, async (req, res) => {
     entity.name = req.body.name;
     entity.timestamps = req.body.timestamps;
     await entity.save();
+    const columns = await Column.find({
+      entityid: entity._id,
+      issequence: true,
+    });
+    for (const column of columns) {
+      await Sequence.deleteMany({ columnid: column._id });
+    }
     await Column.deleteMany({ entityid: req.params.id });
-    for (const col of req.body.columns) {
-      delete col._id;
-      delete col.createAt;
-      delete col.updateAt;
-      delete col._v;
-      const column = new Column({ ...col, entityid: entity._id });
+
+    for (const col of columns) {
+      const column = new Column({
+        entityid: entity._id,
+        name: col.name,
+        datatype: col.datatype,
+        isrequired: col.isrequired,
+        isunique: col.isunique,
+        issequence: col.issequence,
+        seqheaderid: col.seqheaderid,
+        defaultvalue: col.defaultvalue,
+        enum: col.enum,
+      });
       await column.save();
+
+      if (column.issequence) {
+        const seqdetails = await SequenceRuleDetail.find({
+          headerid: col.seqheaderid,
+        });
+        for (const seqdetail of seqdetails) {
+          const sequence = new Sequence({
+            columnid: column._id,
+            detailid: seqdetail._id,
+            seqno: seqdetail.initseqno,
+          });
+          await sequence.save();
+        }
+      }
     }
 
     res.json({ ...OK, data: entity });

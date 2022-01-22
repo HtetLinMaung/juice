@@ -13,9 +13,9 @@ const Entity = require("../models/Entity");
 const Column = require("../models/Column");
 const { saveApplication } = require("../services/ApplicationService");
 const axios = require("axios");
-const Sequence = require("../models/Sequence");
-const SequenceRule = require("../models/SequenceRule");
-const SequenceRuleType = require("../models/SequenceRuleType");
+const SequenceRuleHeader = require("../models/SequenceRuleHeader");
+const SequenceRuleDetail = require("../models/SequenceRuleDetail");
+const SequenceType = require("../models/SequenceType");
 
 const router = express.Router();
 
@@ -67,17 +67,17 @@ router.post("/", isAuth, async (req, res) => {
       }
     }
 
-    const sequence = new Sequence({
+    const seqheader = new SequenceRuleHeader({
       rulename: "AUTO_INCREMENT",
       appid: app._id,
     });
-    await sequence.save();
-    let sequenceRule = new SequenceRule({ sequenceid: sequence._id });
-    await sequenceRule.save();
-    let sequenceRuleType = new SequenceRuleType({
-      seqruleid: sequenceRule._id,
+    await seqheader.save();
+    const seqdetail = new SequenceRuleDetail({ headerid: seqheader._id });
+    await seqdetail.save();
+    let seqtype = new SequenceType({
+      detailid: seqdetail._id,
     });
-    await sequenceRuleType.save();
+    await seqtype.save();
 
     res.json({ ...OK, data: app });
   } catch (err) {
