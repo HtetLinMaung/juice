@@ -1,12 +1,11 @@
-FROM node:lts-alpine3.12
+FROM node:lts-alpine3.14
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json .
 
-# building the app
 RUN npm i
-# Running the app
-COPY . ./
+
+COPY . .
 
 CMD [ "npm", "start" ]
