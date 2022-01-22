@@ -1,6 +1,6 @@
 FROM node:lts-alpine3.12
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY package.json package-lock.json ./
 
