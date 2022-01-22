@@ -13,7 +13,7 @@ const {
 } = require("../services/EndpointService");
 const { saveEntity } = require("../services/EntityService");
 const { queryToMongoFilter } = require("../utils/mongoose-utils");
-const Sequence = require("../models/oldsequence/Sequence");
+const Sequence = require("../models/Sequence");
 const SequenceRuleDetail = require("../models/SequenceRuleDetail");
 
 const router = express.Router();
@@ -105,7 +105,7 @@ router.put("/:id", isAuth, async (req, res) => {
     }
     await Column.deleteMany({ entityid: req.params.id });
 
-    for (const col of columns) {
+    for (const col of req.body.columns) {
       const column = new Column({
         entityid: entity._id,
         name: col.name,
@@ -147,8 +147,13 @@ router.delete("/:id", isAuth, async (req, res) => {
     if (!entity) {
       return res.status(NOT_FOUND.code).json(NOT_FOUND);
     }
-    // const Model = await getModel(entity);
-    // Model.remove({});
+    const columns = await Column.find({
+      entityid: entity._id,
+      issequence: true,
+    });
+    for (const column of columns) {
+      await Sequence.deleteMany({ columnid: column._id });
+    }
     await Entity.findByIdAndDelete(req.params.id);
     await Column.deleteMany({ entityid: req.params.id });
     res.sendStatus(204);
