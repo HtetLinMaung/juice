@@ -27,10 +27,9 @@ const columnSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    sequenceid: {
+    seqheaderid: {
       type: Schema.Types.ObjectId,
-      ref: "Sequence",
-      default: null,
+      ref: "SequenceRuleHeader",
     },
     defaultvalue: {
       type: Schema.Types.Mixed,

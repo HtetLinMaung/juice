@@ -1,4 +1,5 @@
 const { Schema, model } = require("mongoose");
+const moment = require("moment");
 
 const Models = {};
 
@@ -58,9 +59,15 @@ exports.getModel = (modelname, schemabody = {}, schemaoptions = {}) => {
 exports.queryToMongoFilter = (query, filter = {}) => {
   for (const [k, v] of Object.entries(query)) {
     if (
-      !["search", "page", "perpage", "status", "sort", "projection"].includes(
-        k
-      ) &&
+      ![
+        "search",
+        "page",
+        "perpage",
+        "status",
+        "sort",
+        "projection",
+        "export_by",
+      ].includes(k) &&
       !k.startsWith("group__")
     ) {
       let value = v;
@@ -73,10 +80,28 @@ exports.queryToMongoFilter = (query, filter = {}) => {
       const keyoperator = k.split("__");
       if (keyoperator.length > 1) {
         key = keyoperator[0];
-        value = {
-          [`$${keyoperator[1]}`]:
-            keyoperator[1] == "in" ? value.split(",") : value,
-        };
+
+        switch (keyoperator[1]) {
+          case "in":
+            value = {
+              [`$${keyoperator[1]}`]: value.split(","),
+            };
+            break;
+          case "between":
+            value = {
+              ["$lte"]: moment(value.split(",")[1]).isValid
+                ? moment(value.split(",")[1])
+                : value.split(",")[1],
+              ["$gte"]: moment(value.split(",")[0]).isValid
+                ? moment(value.split(",")[0])
+                : value.split(",")[0],
+            };
+            break;
+          default:
+            value = {
+              [`$${keyoperator[1]}`]: value,
+            };
+        }
       }
 
       filter[key] = value;

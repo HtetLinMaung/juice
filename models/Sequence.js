@@ -1,24 +1,18 @@
 const { Schema, model } = require("mongoose");
-const { REQUIRED_STRING } = require("../constants/mongoose-constants");
 
 const sequenceSchema = new Schema(
   {
-    appid: {
+    detailid: {
       type: Schema.Types.ObjectId,
-      ref: "Application",
+      ref: "SequenceRuleDetail",
     },
-    rulename: REQUIRED_STRING,
-    format: {
-      type: String,
-      default: "{seqno}",
+    columnid: {
+      type: Schema.Types.ObjectId,
+      ref: "Column",
     },
-    mindigitlength: {
+    seqno: {
       type: Number,
       default: 1,
-    },
-    prefixchar: {
-      type: String,
-      default: "0",
     },
   },
   {

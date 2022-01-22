@@ -34,19 +34,38 @@ router.post("/", isAuth, async (req, res) => {
       userid: req.tokenData.userid,
       username: req.tokenData.username,
     });
-    axios
-      .post(process.env.IAM + "/auth/create-superadmin", {
+
+    await axios.post(process.env.IAM + "/auth/create-superadmin", {
+      appid: app._id,
+      userid: "admin",
+      password: "P@ssword",
+      username: "Admin",
+      companyid: "techhype",
+      companyname: "techhype",
+      otpservice: "none",
+      profile: "",
+      mobile: "09404888722",
+    });
+
+    if (process.env.STORAGE) {
+      let response = await axios.post(`${process.env.IAM}/auth/login`, {
         appid: app._id,
         userid: "admin",
         password: "P@ssword",
-        username: "Admin",
-        companyid: "techhype",
-        companyname: "techhype",
-        otpservice: "none",
-        profile: "",
-        mobile: "09404888722",
-      })
-      .catch(console.log);
+      });
+      if (response.data.code == 200) {
+        response = await axios.post(process.env.STORAGE + "/api/buckets", {
+          token: response.data.token,
+          bucketname: `${req.body.appname}_bucket`,
+          appid: app._id,
+        });
+        if (response.data.code == 200) {
+          app.storageid = response.data.id;
+          app.storagekey = response.data.key;
+          await app.save();
+        }
+      }
+    }
 
     const sequence = new Sequence({
       rulename: "AUTO_INCREMENT",

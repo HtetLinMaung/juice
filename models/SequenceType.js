@@ -1,11 +1,11 @@
 const { Schema, model } = require("mongoose");
 const { DEFAULT_STRING } = require("../constants/mongoose-constants");
 
-const sequenceRuleTypeSchema = new Schema(
+const sequenceTypeSchema = new Schema(
   {
-    seqruleid: {
+    detailid: {
       type: Schema.Types.ObjectId,
-      ref: "SequenceRule",
+      ref: "SequenceRuleDetail",
     },
     sr: {
       type: Number,
@@ -17,6 +17,6 @@ const sequenceRuleTypeSchema = new Schema(
     timestamps: true,
   }
 );
-sequenceRuleTypeSchema.index({ "$**": "text" });
+sequenceTypeSchema.index({ "$**": "text" });
 
-module.exports = model("SequenceRuleType", sequenceRuleTypeSchema);
+module.exports = model("SequenceType", sequenceTypeSchema);

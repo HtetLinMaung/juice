@@ -20,6 +20,7 @@ const Column = require("../models/Column");
 const { generateSequence } = require("../services/SequenceService");
 const router = express.Router();
 const socketio = require("../utils/socket");
+const { data_to_workbook } = require("../utils/excel-utils");
 
 const checkAuthAndGetModel = async (req, res, endpointname, method) => {
   req.starttime = moment();
@@ -103,7 +104,6 @@ router
       const filter = {
         status: { $ne: 0 },
       };
-
       if (req.tokenData) {
         const { role, userid, companyid } = req.tokenData;
         switch (role) {
@@ -121,6 +121,7 @@ router
       const page = req.query.page;
       const perpage = req.query.perpage;
       const sort = req.query.sort;
+
       let sortOptions = {};
       if (sort) {
         for (const kv of sort.split(",")) {
@@ -212,7 +213,31 @@ router
       req.insight.success = true;
       req.insight.code = OK.code;
       req.insight.save();
-      return res.json({ ...OK, data, total, ...pagination });
+
+      const export_by = req.query.export_by;
+      if (
+        export_by &&
+        (export_by.endsWith(".xlsx") ||
+          export_by.endsWith(".xls") ||
+          export_by.endsWith(".csv"))
+      ) {
+        const workbook = data_to_workbook(req.entityname, data);
+        // res is a Stream object
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=" + export_by
+        );
+
+        return workbook.xlsx.write(res).then(function () {
+          res.status(200).end();
+        });
+      } else {
+        return res.json({ ...OK, data, total, ...pagination });
+      }
     } catch (err) {
       console.log(err);
       req.insight.duration = moment().diff(req.starttime);
@@ -244,7 +269,7 @@ router
       }
       for (const column of req.sequencecolumns) {
         data[column.name] = await generateSequence(
-          column.sequenceid,
+          column,
           data[column.name] || ""
         );
       }
@@ -259,6 +284,135 @@ router
         action: "create",
       });
       return res.status(CREATED.code).json({ ...CREATED, data });
+    } catch (err) {
+      console.log(err);
+      req.insight.duration = moment().diff(req.starttime);
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
+      return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
+    }
+  })
+  .put(async (req, res) => {
+    try {
+      const Model = await checkAuthAndGetModel(
+        req,
+        res,
+        req.params.endpointname,
+        "put"
+      );
+      if (!Model) {
+        return;
+      }
+
+      const filter = {
+        status: { $ne: 0 },
+      };
+      queryToMongoFilter(req.query, filter);
+
+      const datalist = await Model.find(filter);
+      if (!datalist.length) {
+        req.insight.duration = moment().diff(req.starttime);
+        req.insight.success = false;
+        req.insight.code = NOT_FOUND.code;
+        req.insight.save();
+        return res.status(NOT_FOUND.code).json(NOT_FOUND);
+      }
+      for (const data of datalist) {
+        if (req.tokenData) {
+          const { role, userid, companyid } = req.tokenData;
+
+          if (
+            role == "normaluser" &&
+            !(userid == data._userid && companyid == data._companyid)
+          ) {
+            return res.status(UNAUTHORIZED.code).json(UNAUTHORIZED);
+          }
+          if (role == "admin" && companyid != data._companyid) {
+            return res.status(UNAUTHORIZED.code).json(UNAUTHORIZED);
+          }
+        }
+        for (const [k, v] of Object.entries({ ...req.body })) {
+          if (!["_userid", "_companyid", "_id"].includes(k)) {
+            data[k] = v;
+          }
+        }
+        await data.save();
+      }
+
+      req.insight.duration = moment().diff(req.starttime);
+      req.insight.success = true;
+      req.insight.code = OK.code;
+      req.insight.save();
+      socketio.getInstance().to(req.appid).emit("data-change", {
+        entityname: req.entityname,
+        action: "update",
+      });
+      return res.json({ ...OK, datalist });
+    } catch (err) {
+      console.log(err);
+      req.insight.duration = moment().diff(req.starttime);
+      req.insight.success = false;
+      req.insight.code = SERVER_ERROR.code;
+      req.insight.save();
+      addLog("error", err.message);
+      return res.status(SERVER_ERROR.code).json(SERVER_ERROR);
+    }
+  })
+  .delete(async (req, res) => {
+    try {
+      const Model = await checkAuthAndGetModel(
+        req,
+        res,
+        req.params.endpointname + "/{id}",
+        "delete"
+      );
+      if (!Model) {
+        return;
+      }
+
+      const filter = {
+        status: { $ne: 0 },
+      };
+      queryToMongoFilter(req.query, filter);
+      if (req.tokenData) {
+        const { role, userid, companyid } = req.tokenData;
+        switch (role) {
+          case "admin":
+            filter._companyid = companyid;
+            break;
+          case "normaluser":
+            filter._userid = userid;
+            filter._companyid = companyid;
+            break;
+        }
+      }
+
+      const size = await Model.find(filter).countDocuments();
+      if (!size) {
+        req.insight.duration = moment().diff(req.starttime);
+        req.insight.success = false;
+        req.insight.code = NOT_FOUND.code;
+        req.insight.save();
+        return res.status(NOT_FOUND.code).json(NOT_FOUND);
+      }
+
+      if (process.env.SOFT_DELETE == "YES") {
+        await Model.updateMany(filter, { $set: { status: 0 } });
+      } else {
+        await Model.deleteMany(filter);
+      }
+
+      req.insight.duration = moment().diff(req.starttime);
+      req.insight.success = true;
+      req.insight.code = 204;
+      req.insight.save();
+      socketio.getInstance().to(req.appid).emit("data-change", {
+        entityname: req.entityname,
+        action: "delete",
+      });
+      return res.sendStatus(204);
     } catch (err) {
       console.log(err);
       req.insight.duration = moment().diff(req.starttime);

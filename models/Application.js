@@ -13,6 +13,8 @@ const applicationSchema = new Schema(
       type: String,
       default: "1d",
     },
+    storageid: DEFAULT_STRING,
+    storagekey: DEFAULT_STRING,
     userid: REQUIRED_STRING,
     username: REQUIRED_STRING,
   },

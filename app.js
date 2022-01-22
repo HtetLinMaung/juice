@@ -23,6 +23,7 @@ app.use(
 app.use("/juice/api/entities", require("./controllers/EntityController"));
 app.use("/juice/api/endpoints", require("./controllers/EndpointController"));
 app.use("/juice/api/sequences", require("./controllers/SequenceController"));
+app.use("/juice/api/insights", require("./controllers/InsightController"));
 app.use("/juice", require("./controllers/ApiController"));
 
 mongoose.connect(process.env.DB_CONNECTION).then(() => {
@@ -42,7 +43,7 @@ mongoose.connect(process.env.DB_CONNECTION).then(() => {
     socket.on("juice-init", ({ userid }) => {
       socket.join([userid, "juice"]);
     });
-    socket.on("init", (payload) => {
+    socket.on("subscribe", (payload) => {
       init(socket, payload);
     });
     socket.on("direct-message", (payload) => {
@@ -51,7 +52,6 @@ mongoose.connect(process.env.DB_CONNECTION).then(() => {
 
     socket.on("disconnect", () => {
       handleSocketDisconnect(socket);
-      
     });
   });
 

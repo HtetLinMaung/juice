@@ -7,7 +7,7 @@ exports.createCrudEndpoints = async (entity) => {
 
   const app = await Application.findById(entity.appid);
   if (app) {
-    for (const method of ["get", "post"]) {
+    for (const method of ["get", "post", "put", "delete"]) {
       const endpoint = new EndPoint({
         name: entity.name,
         key,
