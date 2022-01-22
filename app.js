@@ -15,6 +15,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
+app.get("/juice", (req, res) => {
+  res.send(
+    `<div style="height: 100vh; display: flex; justify-content: center; align-items: center;">
+    <h1>Juice Server Online</h1>
+    </div>`
+  );
+});
+
 app.use("/juice/api/auth", require("./controllers/AuthController"));
 app.use(
   "/juice/api/applications",
